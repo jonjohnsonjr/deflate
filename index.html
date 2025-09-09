@@ -54,6 +54,7 @@ svg {
         });
         isReady.then(() => {
             console.log('ready')
+            render();
         });
 
         const graphviz = await Graphviz.load();
@@ -129,7 +130,7 @@ svg {
         window.debouncedRender = render;
 	</script>
     <div class="top">
-        <textarea id="input" style="height: 100%; width: 100%;" type="text" onkeyup="debouncedRender()"></textarea>
+        <textarea id="input" style="height: 100%; width: 100%;" type="text" onkeyup="debouncedRender()">type text into this textarea to see it encoded as a type 2 deflate block</textarea>
     </div>
     <div id="output"></div>
 </body>
