@@ -1,0 +1,136 @@
+<html>
+<head>
+<meta charset="utf-8">
+<title>deflate</title>
+<style>
+
+body {
+    font-family: monospace;
+}
+td { padding: 0.5em; }
+table, th, td { border: 1px solid black; border-collapse: collapse; text-align: center; }
+* {
+    box-sizing: border-box;
+}
+
+.row {
+  display: flex;
+}
+
+.column {
+  flex: 50%;
+  padding: 5px;
+}
+
+svg {
+    min-width: 98vw !important;
+    width: 98vw !important;
+}
+
+.top {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999;
+    width: 100%;
+    height: 50px;
+}
+
+#output {
+    margin-top: 50px;
+}
+</style>
+</head>
+<body>
+	<script src="wasm_exec.js"></script>
+	<script type="module">
+        import { Graphviz } from "https://cdn.jsdelivr.net/npm/@hpcc-js/wasm/dist/index.js";
+        const go = new Go();
+        let isReady = new Promise((resolve) => {
+          window.onGoInitialized = resolve;
+        });
+        WebAssembly.instantiateStreaming(fetch("mos.deflate.wasm"), go.importObject).then((result) => {
+            go.run(result.instance);
+        });
+        isReady.then(() => {
+            console.log('ready')
+        });
+
+        const graphviz = await Graphviz.load();
+        
+        const debounce = (callback, wait) => {
+            let timeoutId = null;
+            return (...args) => {
+                window.clearTimeout(timeoutId);
+                timeoutId = window.setTimeout(() => {
+                    callback(...args);
+                }, wait);
+            };
+        }
+
+
+        function render() {
+            var input = document.querySelector("#input").value;
+            var out = reflate(input);
+            document.querySelector("#output").innerHTML = out;
+
+            for (const el of document.getElementsByClassName("dot")) {
+                // This is very lazy but > and < get escaped.
+                const dot = el.innerHTML.replaceAll("&gt;", ">").replaceAll("&lt;", "<");
+
+                // Re-render the dot syntax to svg.
+                const svg = graphviz.layout(dot, "svg", "dot");
+                el.innerHTML = svg;
+                el.hidden = false;
+            }
+
+            var hash = window.location.hash;
+            if (hash) {
+                var els = document.querySelectorAll("a[href='"+hash+"']");
+                if (els.length === 1) {
+                    els[0].scrollIntoView();
+                }
+            }
+
+            // Underline bits in the bistream when moused over.
+            const table = document.getElementById('bitstream');
+            table.addEventListener('mouseover', () => {
+                console.log('mouseover');
+                // Find the nearest <tr> that the mouse is over
+                const row = event.target.closest('tr');
+
+                if (row && table.contains(row)) {
+                    // Get the row index relative to the table
+                    const index = row.rowIndex; // includes <thead> rows if present
+                    console.log("Hovered row index:", index);
+                    document.querySelectorAll('.bs-'+index).forEach(el => {
+                        el.style.textDecoration = "underline";
+                    });
+                }
+            });
+
+            table.addEventListener('mouseout', () => {
+                console.log('mouseout');
+                // Find the nearest <tr> that the mouse is over
+                const row = event.target.closest('tr');
+
+                if (row && table.contains(row)) {
+                    // Get the row index relative to the table
+                    const index = row.rowIndex; // includes <thead> rows if present
+                    console.log("Hovered row index:", index);
+                    document.querySelectorAll('.bs-'+index).forEach(el => {
+                        el.style.textDecoration = "none";
+                    });
+                }
+            });
+
+        }
+
+        window.debouncedRender = render;
+	</script>
+    <div class="top">
+        <textarea id="input" style="height: 100%; width: 100%;" type="text" onkeyup="debouncedRender()"></textarea>
+    </div>
+    <div id="output"></div>
+</body>
+</html>
