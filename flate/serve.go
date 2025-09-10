@@ -97,7 +97,6 @@ func Serve(w io.Writer, blocks iter.Seq[Block]) error {
 			continue
 		}
 
-		fmt.Fprintf(w, "<details open>\n")
 		fmt.Fprintf(w, "<h2>code lengths</h2>\n")
 
 		fmt.Fprintf(w, "<table>\n")
@@ -292,7 +291,6 @@ func Serve(w io.Writer, blocks iter.Seq[Block]) error {
 
 		fmt.Fprintf(w, "</div>\n")
 		fmt.Fprintf(w, "</div>\n")
-		fmt.Fprintf(w, "</details>\n")
 
 		fmt.Fprintf(w, "<div>\n")
 		fmt.Fprintf(w, "<h2><a href=\"#lit\">literals/lengths tree</a></h2>\n")
