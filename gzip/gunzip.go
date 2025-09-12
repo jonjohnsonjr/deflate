@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"hash/crc32"
 	"io"
 	"iter"
@@ -342,7 +343,7 @@ func NewIter(r io.Reader) iter.Seq[*Member] {
 					})
 					break
 				}
-				panic(z.err) //todo
+				panic(fmt.Sprintf("readHeader: %v", z.err))
 			}
 
 			m := &Member{
@@ -359,7 +360,7 @@ func NewIter(r io.Reader) iter.Seq[*Member] {
 				if errors.Is(err, io.EOF) {
 					break
 				}
-				panic(err)
+				panic(fmt.Sprintf("ReadFull: %v", z.err))
 			}
 			foot = &Footer{
 				CRC32:  z.buf[:4],

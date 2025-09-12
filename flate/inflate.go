@@ -36,6 +36,7 @@ const (
 // Initialize the fixedHuffmanDecoder only once upon first use.
 var fixedOnce sync.Once
 var fixedHuffmanDecoder huffmanDecoder
+var fixedHuffmanDistances huffmanDecoder
 
 // A CorruptInputError reports the presence of corrupt input at a given offset.
 type CorruptInputError int64
@@ -934,6 +935,12 @@ func fixedHuffmanDecoderInit() {
 			bits[i] = 8
 		}
 		fixedHuffmanDecoder.init(bits[:])
+
+		var dbits [32]int
+		for i := 0; i < 32; i++ {
+			dbits[i] = 5
+		}
+		fixedHuffmanDistances.init(dbits[:])
 	})
 }
 
@@ -1328,6 +1335,9 @@ func NewIter(r io.Reader) iter.Seq[Block] {
 					Type:  1,
 					f:     &f,
 				}
+
+				f.h1 = fixedHuffmanDecoder
+				f.h2 = fixedHuffmanDistances
 
 				fn := func(w io.Writer) error {
 					return f.decodeBlock(w, &fixedHuffmanDecoder, nil)

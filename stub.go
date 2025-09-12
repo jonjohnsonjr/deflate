@@ -31,8 +31,12 @@ func reflate(input string) string {
 		panic(err)
 	}
 
+	return renderDeflate(in.Bytes())
+}
+
+func renderDeflate(in []byte) string {
 	w := &bytes.Buffer{}
-	for member := range gzip.NewIter(bytes.NewReader(in.Bytes())) {
+	for member := range gzip.NewIter(bytes.NewReader(in)) {
 		if member.Header == nil {
 			t := member.Footer
 			fmt.Fprintf(w, "<h2>gzip trailer</h2>\n")
@@ -57,14 +61,14 @@ func reflate(input string) string {
 		}
 
 		if err := flate.Serve(w, member.Blocks()); err != nil {
-			panic(err)
+			panic(fmt.Errorf("flate.Serve: %v", err))
 		}
 	}
 
 	fmt.Fprintf(w, "<br>\n")
-	fmt.Fprintf(w, "<details><summary>gzipped bytes (%d)</summary>\n", in.Len())
+	fmt.Fprintf(w, "<details><summary>gzipped bytes (%d)</summary>\n", len(in))
 	fmt.Fprintf(w, "<pre>\n")
-	for _, byt := range in.Bytes() {
+	for _, byt := range in {
 		fmt.Fprintf(w, "%08b\n", byt)
 	}
 	fmt.Fprintf(w, "</pre>\n")
@@ -80,6 +84,19 @@ func main() {
 		}
 		name := args[0].String()
 		return reflate(name)
+	}))
+
+	js.Global().Set("renderDeflate", js.FuncOf(func(this js.Value, args []js.Value) any {
+		if len(args) != 2 {
+			return "need 2 args"
+		}
+		length := args[0].Int()
+
+		dst := make([]byte, length)
+
+		js.CopyBytesToGo(dst, args[1])
+
+		return renderDeflate(dst)
 	}))
 
 	js.Global().Get("onGoInitialized").Invoke()

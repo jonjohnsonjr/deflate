@@ -33,11 +33,11 @@ svg {
     left: 0;
     z-index: 999;
     width: 100%;
-    height: 50px;
+    height: 100px;
 }
 
 #output {
-    margin-top: 50px;
+    margin-top: 100px;
 }
 </style>
 </head>
@@ -70,9 +70,12 @@ svg {
         }
 
 
-        function render() {
+        function render(out) {
             var input = document.querySelector("#input").value;
-            var out = reflate(input);
+            renderViz(reflate(input));
+        }
+
+        function renderViz(out) {
             document.querySelector("#output").innerHTML = out;
 
             for (const el of document.getElementsByClassName("dot")) {
@@ -95,15 +98,18 @@ svg {
 
             // Underline bits in the bistream when moused over.
             const table = document.getElementById('bitstream');
+
+            if (!table) {
+                return
+            }
+
             table.addEventListener('mouseover', () => {
-                console.log('mouseover');
                 // Find the nearest <tr> that the mouse is over
                 const row = event.target.closest('tr');
 
                 if (row && table.contains(row)) {
                     // Get the row index relative to the table
                     const index = row.rowIndex; // includes <thead> rows if present
-                    console.log("Hovered row index:", index);
                     document.querySelectorAll('.bs-'+index).forEach(el => {
                         el.style.textDecoration = "underline";
                     });
@@ -111,14 +117,12 @@ svg {
             });
 
             table.addEventListener('mouseout', () => {
-                console.log('mouseout');
                 // Find the nearest <tr> that the mouse is over
                 const row = event.target.closest('tr');
 
                 if (row && table.contains(row)) {
                     // Get the row index relative to the table
                     const index = row.rowIndex; // includes <thead> rows if present
-                    console.log("Hovered row index:", index);
                     document.querySelectorAll('.bs-'+index).forEach(el => {
                         el.style.textDecoration = "none";
                     });
@@ -127,10 +131,23 @@ svg {
 
         }
 
+        function upload() {
+            const el = document.getElementById("upload");
+
+            for (const file of el.files) {
+                file.arrayBuffer().then((ab) => {
+                    renderViz(renderDeflate(file.size, new Uint8Array(ab)));
+                });
+            }
+        }
+
         window.debouncedRender = render;
+
+        window.upload = upload;
 	</script>
     <div class="top">
-        <textarea id="input" style="height: 100%; width: 100%;" type="text" onkeyup="debouncedRender()">type text into this textarea to see it encoded as a type 2 deflate block</textarea>
+        <textarea id="input" style="height: 66%; width: 100%;" type="text" onkeyup="debouncedRender()">type text into this textarea to see it encoded as a type 2 deflate block (alternatively, upload a file)</textarea>
+        <input type="file" id="upload" style="height: 33%;" onchange="upload()"/>
     </div>
     <div id="output"></div>
 </body>
