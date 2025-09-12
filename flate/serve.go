@@ -97,6 +97,60 @@ func Serve(w io.Writer, blocks iter.Seq[Block]) error {
 			continue
 		}
 
+		h1Bits := map[int]string{}
+		var h1 huffmanDecoder
+
+		if b.Type == 1 {
+			h1 = fixedHuffmanDecoder
+		} else if b.Type == 2 {
+			if !h1.init(b.H1) {
+				panic(fmt.Errorf("failed to init"))
+			}
+		}
+		for symbol, length := range h1.symbolLengths {
+			if length == 0 {
+				continue
+			}
+			code := h1.symbolCodes[symbol]
+
+			path := ""
+			for i := length - 1; i >= 0; i-- {
+				if (code>>uint(i))&1 == 1 {
+					path += "1"
+				} else {
+					path += "0"
+				}
+			}
+			h1Bits[symbol] = path
+		}
+
+		h2Bits := map[int]string{}
+		var h2 huffmanDecoder
+
+		if b.Type == 1 {
+			h2 = fixedHuffmanDistances
+		} else if b.Type == 2 {
+			if !h2.init(b.H2) {
+				panic(fmt.Errorf("failed to init"))
+			}
+		}
+		for symbol, length := range h2.symbolLengths {
+			if length == 0 {
+				continue
+			}
+			code := h2.symbolCodes[symbol]
+
+			path := ""
+			for i := length - 1; i >= 0; i-- {
+				if (code>>uint(i))&1 == 1 {
+					path += "1"
+				} else {
+					path += "0"
+				}
+			}
+			h2Bits[symbol] = path
+		}
+
 		if b.Type == 2 {
 			fmt.Fprintf(w, "<h2>code lengths</h2>\n")
 
@@ -158,7 +212,12 @@ func Serve(w io.Writer, blocks iter.Seq[Block]) error {
 			fmt.Fprintf(w, "<h2>code length tree</h2>\n")
 
 			fmt.Fprintf(w, "<div>\n")
-			if err := hdot(w, b.H0, strconv.Itoa); err != nil {
+			var h0 huffmanDecoder
+			if !h0.init(b.H0) {
+				fmt.Fprintf(w, "init failed")
+				return fmt.Errorf("init failed")
+			}
+			if err := hdot(w, h0, strconv.Itoa); err != nil {
 				fmt.Fprintf(w, "error: %v", err)
 				return err
 			}
@@ -293,77 +352,43 @@ func Serve(w io.Writer, blocks iter.Seq[Block]) error {
 			fmt.Fprintf(w, "</div>\n")
 			fmt.Fprintf(w, "</div>\n")
 
-			fmt.Fprintf(w, "<div>\n")
-			fmt.Fprintf(w, "<h2><a href=\"#lit\">literals/lengths tree</a></h2>\n")
-			if err := hdot(w, b.H1, getSymbolLabel); err != nil {
-				fmt.Fprintf(w, "error: %v", err)
-				return err
-			}
-			fmt.Fprintf(w, "</div>\n")
-			fmt.Fprintf(w, "<br>\n")
-
-			fmt.Fprintf(w, "<div>\n")
-			fmt.Fprintf(w, "<h2><a href=\"#dist\">distances tree</a></h2>\n")
-			if err := hdot(w, b.H2, getDistanceLabel); err != nil {
-				fmt.Fprintf(w, "error: %v", err)
-				return err
-			}
-			fmt.Fprintf(w, "</div>\n")
 		}
 
-		h1Bits := map[int]string{}
-		var h1 huffmanDecoder
+		fmt.Fprintf(w, "<div>\n")
+		fmt.Fprintf(w, "<h2><a href=\"#lit\">literals/lengths tree</a></h2>\n")
 
 		if b.Type == 1 {
-			h1 = fixedHuffmanDecoder
-		} else if b.Type == 2 {
-			if !h1.init(b.H1) {
-				panic(fmt.Errorf("failed to init"))
-			}
-		}
-		for symbol, length := range h1.symbolLengths {
-			if length == 0 {
-				continue
-			}
-			code := h1.symbolCodes[symbol]
-
-			path := ""
-			for i := length - 1; i >= 0; i-- {
-				if (code>>uint(i))&1 == 1 {
-					path += "1"
-				} else {
-					path += "0"
-				}
-			}
-			h1Bits[symbol] = path
+			fmt.Fprintf(w, "<details>\n")
 		}
 
-		h2Bits := map[int]string{}
-		var h2 huffmanDecoder
+		if err := hdot(w, h1, getSymbolLabel); err != nil {
+			fmt.Fprintf(w, "error: %v", err)
+			return err
+		}
 
 		if b.Type == 1 {
-			h2 = fixedHuffmanDistances
-		} else if b.Type == 2 {
-			if !h2.init(b.H2) {
-				panic(fmt.Errorf("failed to init"))
-			}
+			fmt.Fprintf(w, "</details>\n")
 		}
-		for symbol, length := range h2.symbolLengths {
-			if length == 0 {
-				continue
-			}
-			code := h2.symbolCodes[symbol]
 
-			path := ""
-			for i := length - 1; i >= 0; i-- {
-				if (code>>uint(i))&1 == 1 {
-					path += "1"
-				} else {
-					path += "0"
-				}
-			}
-			h2Bits[symbol] = path
+		fmt.Fprintf(w, "</div>\n")
+		fmt.Fprintf(w, "<br>\n")
+
+		fmt.Fprintf(w, "<div>\n")
+		fmt.Fprintf(w, "<h2><a href=\"#dist\">distances tree</a></h2>\n")
+
+		if b.Type == 1 {
+			fmt.Fprintf(w, "<details>\n")
 		}
+
+		if err := hdot(w, h2, getDistanceLabel); err != nil {
+			fmt.Fprintf(w, "error: %v", err)
+			return err
+		}
+		if b.Type == 1 {
+			fmt.Fprintf(w, "</details>\n")
+		}
+
+		fmt.Fprintf(w, "</div>\n")
 
 		fmt.Fprintf(w, "<br>\n")
 		fmt.Fprintf(w, "<h2>data</h2>\n")
@@ -525,13 +550,8 @@ func Serve(w io.Writer, blocks iter.Seq[Block]) error {
 	return nil
 }
 
-func hdot(w io.Writer, codes []int, getLabel func(int) string) error {
+func hdot(w io.Writer, h huffmanDecoder, getLabel func(int) string) error {
 	in := &bytes.Buffer{}
-
-	var h huffmanDecoder
-	if !h.init(codes) {
-		return fmt.Errorf("failed to init")
-	}
 
 	if err := h.writeDotFileWithType(in, getLabel); err != nil {
 		return err
