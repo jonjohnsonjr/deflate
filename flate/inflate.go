@@ -308,7 +308,7 @@ func (h *huffmanDecoder) writeDotFileWithType(file io.Writer, getLabel func(int)
 
 	// Create root node
 	rootID := getNode("")
-	fmt.Fprintf(file, "  %d [label=\"root\"];\n", rootID)
+	fmt.Fprintf(file, "  %d [label=\"\"];\n", rootID)
 	createdNodes[rootID] = true
 
 	symbolToLength := map[int]int{}
