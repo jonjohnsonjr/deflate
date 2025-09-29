@@ -228,17 +228,17 @@ func Serve(w io.Writer, blocks iter.Seq[Block]) error {
 
 			fmt.Fprintf(w, `<pre>The alphabet for code lengths is as follows:
 
-		0 - 15: Represent code lengths of 0 - 15
-		16: Copy the previous code length 3 - 6 times.
-			The next 2 bits indicate repeat length
-				  (0 = 3, ... , 3 = 6)
-			   Example:  Codes 8, 16 (+2 bits 11),
-						 16 (+2 bits 10) will expand to
-						 12 code lengths of 8 (1 + 6 + 5)
-		17: Repeat a code length of 0 for 3 - 10 times.
-			(3 bits of length)
-		18: Repeat a code length of 0 for 11 - 138 times
-			(7 bits of length)</pre>
+    0 - 15: Represent code lengths of 0 - 15
+        16: Copy the previous code length 3 - 6 times.
+            The next 2 bits indicate repeat length
+                  (0 = 3, ... , 3 = 6)
+               Example:  Codes 8, 16 (+2 bits 11),
+                         16 (+2 bits 10) will expand to
+                         12 code lengths of 8 (1 + 6 + 5)
+        17: Repeat a code length of 0 for 3 - 10 times.
+            (3 bits of length)
+        18: Repeat a code length of 0 for 11 - 138 times
+            (7 bits of length)</pre>
 	`)
 
 			fmt.Fprint(w, "<div class=\"row\">\n")
